@@ -1,7 +1,7 @@
 import express from "express";
 import { validatePostInput } from "../middlewares/post/validate.post.middleware";
 import { verifyAuthToken } from "../middlewares/auth/verify.auth.middleware";
-import { createPost } from "../controllers/post/create.post.controller";
+import { post } from "../controllers/post/post.controller";
 import { uploadPostImage } from "../middlewares/post/upload.post.middleware";
 
 const postRouter = express.Router();
@@ -10,20 +10,23 @@ postRouter.post(
     "/create",
     verifyAuthToken,
     uploadPostImage,
-    validatePostInput,
-    createPost,
+    validatePostInput("create"),
+    post("create"),
 );
 
 postRouter.patch(
-    '/edit',
+    '/:postId',
     verifyAuthToken,
-    validatePostInput,
+    uploadPostImage,
+    validatePostInput("edit"),
+    post("edit")
 );
 
 postRouter.delete(
-    '/delete',
+    '/:postId',
     verifyAuthToken,
-    validatePostInput,
+    validatePostInput("delete"),
+    post("delete"),
 );
 
 export default postRouter;
