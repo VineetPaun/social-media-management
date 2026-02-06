@@ -4,6 +4,7 @@ import "dotenv/config";
 import { connectDB, db } from "./configs/database.config";
 import userRouter from "./routes/user.route";
 import { usersTable } from "./models/user.model";
+import postRouter from "./routes/post.route";
 
 const port = 3000;
 const app = express();
@@ -18,7 +19,8 @@ app.use(
 );
 
 app.use(express.json());
-app.use(`/`, userRouter);
+app.use(`/user`, userRouter);
+app.use('/post', postRouter)
 
 // Just for development, not for production
 app.delete("/drop", async (req, res, next) => {
