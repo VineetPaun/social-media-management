@@ -5,22 +5,28 @@ import { ApiError } from "../../middlewares/error/api.error.middleware";
 
 const createPost = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { image, description } = req.body as {
-      image: string;
+    const { description } = req.body as {
       description?: string;
     };
     const authUser = req.authUser;
+    const imageFile = req.file;
 
     if (!authUser) {
       throw ApiError.unauthorized("Unauthorized");
+    }
+
+    if (!imageFile) {
+      throw ApiError.badRequest("Image is required");
     }
 
     if (!db) {
       throw ApiError.internal("Database connection not established");
     }
 
+    const imagePath = `/uploads/posts/${imageFile.filename}`;
+
     await db.insert(postsTable).values({
-      image,
+      image: imagePath,
       description,
       userId: authUser.id,
     });
@@ -28,6 +34,9 @@ const createPost = async (req: Request, res: Response, next: NextFunction) => {
     res.status(201).json({
       success: true,
       message: "Post created successfully",
+      data: {
+        image: imagePath,
+      },
     });
   } catch (error) {
     next(error);

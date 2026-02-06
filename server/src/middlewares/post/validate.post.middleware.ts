@@ -1,38 +1,39 @@
 import { NextFunction, Request, Response } from "express";
 import validator from "validator";
 
-type AuthValidationError = {
+type PostValidationError = {
   field: "description" | "image";
   message: string;
 };
 
 const validatePostInput = (req: Request, res: Response, next: NextFunction) => {
-  const {
-    image: imageRaw,
-    description: descriptionRaw,
-  } = req.body as {
-    image?: string;
-    description?: string;
+  const { description: descriptionRaw } = req.body as {
+    description?: unknown;
   };
-  const errors: AuthValidationError[] = [];
+  const errors: PostValidationError[] = [];
 
-  if (imageRaw === undefined || imageRaw === null || imageRaw === "") {
+  if (!req.file) {
     errors.push({ field: "image", message: "Image is required" });
-  } else if (typeof imageRaw !== "string") {
-    errors.push({ field: "image", message: "Image must be a string" });
-  } else {
-    const trimmedImage = imageRaw.trim();
   }
 
-  if (typeof descriptionRaw !== "string") {
-    errors.push({ field: "description", message: "Description must be a string" });
-  } else {
-    const trimmedEmail = descriptionRaw.trim().toLowerCase();
-    if (!validator.isLength(trimmedEmail, { max: 500 })) {
+  if (
+    descriptionRaw !== undefined &&
+    descriptionRaw !== null &&
+    descriptionRaw !== ""
+  ) {
+    if (typeof descriptionRaw !== "string") {
       errors.push({
         field: "description",
-        message: "Description must be at max 500 characters",
+        message: "Description must be a string",
       });
+    } else {
+      const trimmedDescription = descriptionRaw.trim();
+      if (!validator.isLength(trimmedDescription, { max: 500 })) {
+        errors.push({
+          field: "description",
+          message: "Description must be at max 500 characters",
+        });
+      }
     }
   }
 
@@ -45,12 +46,12 @@ const validatePostInput = (req: Request, res: Response, next: NextFunction) => {
     });
   }
 
-  if (typeof imageRaw === "string") {
-    req.body.image = imageRaw.trim();
-  }
   if (typeof descriptionRaw === "string") {
-    req.body.description = descriptionRaw.trim()
+    req.body.description = descriptionRaw.trim();
+  } else {
+    req.body.description = undefined;
   }
+
   next();
 };
 

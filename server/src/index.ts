@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import "dotenv/config";
 import { connectDB, db } from "./configs/database.config";
 import userRouter from "./routes/user.route";
@@ -8,6 +10,8 @@ import postRouter from "./routes/post.route";
 
 const port = 3000;
 const app = express();
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.resolve(currentDir, "../uploads");
 
 app.use(
   cors({
@@ -19,6 +23,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use("/uploads", express.static(uploadsDir));
 app.use(`/user`, userRouter);
 app.use('/post', postRouter)
 
