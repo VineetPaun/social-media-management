@@ -7,6 +7,7 @@ import { db } from "../../configs/database.config.js";
 const signup = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { name, email, password } = req.body;
+    const profilePicFile = req.file;
 
     if (!db) {
       throw ApiError.badRequest("Database connection not established");
@@ -14,12 +15,17 @@ const signup = async (req: Request, res: Response, next: NextFunction) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const profilePicPath = profilePicFile
+      ? `/uploads/profiles/${profilePicFile.filename}`
+      : null;
+
     const [newUser] = await db
       .insert(usersTable)
       .values({
         name,
         email,
         password: hashedPassword,
+        profilePic: profilePicPath,
       })
       .returning();
 
@@ -30,6 +36,7 @@ const signup = async (req: Request, res: Response, next: NextFunction) => {
         userId: newUser.id,
         userName: newUser.name,
         email: newUser.email,
+        profilePic: newUser.profilePic,
       },
     });
   } catch (error) {

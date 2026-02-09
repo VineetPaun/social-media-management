@@ -26,13 +26,13 @@ app.use(
 app.use(express.json());
 app.use("/uploads", express.static(uploadsDir));
 app.use(`/user`, userRouter);
-app.use('/post', postRouter)
+app.use("/post", postRouter);
 
 // Just for development, not for production
 app.delete("/drop", async (req, res, next) => {
   try {
-    await db?.delete(usersTable)
-    await db?.delete(postsTable)
+    await db?.delete(usersTable);
+    await db?.delete(postsTable);
     // logger.warn("Database dropped via API request");
     res.json({ success: true, message: "Database dropped successfully" });
   } catch (error) {
@@ -40,10 +40,32 @@ app.delete("/drop", async (req, res, next) => {
   }
 });
 
+// Global error handler
+app.use(
+  (
+    err: any,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) => {
+    console.error("Global Error Handler:", err);
+
+    const statusCode = err.statusCode || 500;
+    const message = err.message || "Something went wrong";
+
+    res.status(statusCode).json({
+      success: false,
+      statusCode,
+      message,
+      ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
+    });
+  },
+);
+
 app.listen(port, () => {
   console.log(`
     ╔════════════════════════════════════════════╗
-    ║    Instagram Management App             ║
+    ║    Instagram Management App                ║
     ╠════════════════════════════════════════════╣
     ║  Port:        ${port}                         ║
     ║  Environment: development                  ║

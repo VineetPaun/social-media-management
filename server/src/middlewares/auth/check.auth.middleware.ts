@@ -43,18 +43,20 @@ const checkUser =
         });
       }
 
-      if (mode === "signin" && !user) {
-        return res.status(404).json({
-          success: false,
-          statusCode: 404,
-          message: "User not found",
-          errors: [
-            {
-              field: "username",
-              message: "No account found with this username",
-            },
-          ],
-        });
+      if (mode === "signin") {
+        if (!user || user.isDeleted) {
+          return res.status(404).json({
+            success: false,
+            statusCode: 404,
+            message: "User not found",
+            errors: [
+              {
+                field: "username",
+                message: "No active account found with this username",
+              },
+            ],
+          });
+        }
       }
 
       req.user = user;

@@ -78,9 +78,16 @@ const post =
             image: postsTable.image,
             userId: postsTable.userId,
             userName: usersTable.name,
+            userProfilePic: usersTable.profilePic,
           })
           .from(postsTable)
-          .leftJoin(usersTable, eq(postsTable.userId, usersTable.id));
+          .leftJoin(usersTable, eq(postsTable.userId, usersTable.id))
+          .where(
+            and(
+              eq(postsTable.isDeleted, false),
+              eq(usersTable.isDeleted, false),
+            ),
+          ); // Filter out soft deleted posts and posts from soft deleted users
 
         return res.status(200).json({
           success: true,
@@ -136,32 +143,56 @@ const post =
         if (!updatedPost) {
           throw ApiError.notFound("Post not found");
         }
-      } else {
+      } else if (mode === "delete") {
+        console.log(
+          `[DELETE] Starting soft deletion process for post: ${postId}, user: ${authUser.id}`,
+        );
+
         if (!postId) {
           throw ApiError.badRequest("Post id is required");
         }
 
-        const [deletedPost] = await db
-          .delete(postsTable)
-          .where(
-            and(eq(postsTable.id, postId), eq(postsTable.userId, authUser.id)),
-          )
-          .returning({
-            id: postsTable.id,
-            image: postsTable.image,
-          });
+        let softDeletedPost;
+        try {
+          console.log(`[DELETE] Attempting DB soft delete update...`);
+          // Perform soft delete by updating isDeleted flag
+          const result = await db
+            .update(postsTable)
+            .set({
+              isDeleted: true,
+              deletedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(postsTable.id, postId),
+                eq(postsTable.userId, authUser.id),
+                eq(postsTable.isDeleted, false),
+              ),
+            )
+            .returning({
+              id: postsTable.id,
+              image: postsTable.image,
+            });
 
-        if (!deletedPost) {
+          softDeletedPost = result[0];
+          console.log(`[DELETE] DB soft delete result:`, softDeletedPost);
+        } catch (dbError) {
+          console.error(`[DELETE] DB Error:`, dbError);
+          throw ApiError.internal("Database error during post deletion");
+        }
+
+        if (!softDeletedPost) {
+          console.log(`[DELETE] Post not found or not owned by user`);
           throw ApiError.notFound("Post not found");
         }
 
-        await removeUploadedImage(deletedPost.image);
+        // We do NOT delete the image file for soft delete to preserve data
 
         return res.status(200).json({
           success: true,
           message: "Post deleted successfully",
           data: {
-            postId: deletedPost.id,
+            postId: softDeletedPost.id,
           },
         });
       }
@@ -177,6 +208,10 @@ const post =
         },
       });
     } catch (error) {
+      console.error(
+        `[CONTROLLER ERROR] Post controller failed in mode ${mode}:`,
+        error,
+      );
       next(error);
     }
   };

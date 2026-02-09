@@ -11,11 +11,10 @@ import {
 
 interface HomeProps {
   auth: SignInData | null;
-  onPostDeleted: () => void;
   refreshTrigger: number;
 }
 
-export function Home({ auth, onPostDeleted, refreshTrigger }: HomeProps) {
+export function Home({ auth, refreshTrigger }: HomeProps) {
   const [posts, setPosts] = useState<PostRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +22,6 @@ export function Home({ auth, onPostDeleted, refreshTrigger }: HomeProps) {
   useEffect(() => {
     const loadPosts = async () => {
       if (!auth?.token) {
-        // No auth - show empty state with prompt to sign in
         setLoading(false);
         return;
       }
@@ -54,7 +52,6 @@ export function Home({ auth, onPostDeleted, refreshTrigger }: HomeProps) {
     try {
       await deletePost({ token: auth.token, postId });
       setPosts(posts.filter((p) => p.id !== postId));
-      onPostDeleted();
     } catch (err) {
       if (err instanceof ApiClientError) {
         alert(err.message);
@@ -99,11 +96,22 @@ export function Home({ auth, onPostDeleted, refreshTrigger }: HomeProps) {
         <div className="posts-feed">
           {posts.map((post) => (
             <div key={post.id} className="post-card">
-              <div className="post-header">
+              <Link to={`/profile/${post.userId}`} className="post-header">
+                {post.userProfilePic ? (
+                  <img
+                    src={toAssetUrl(post.userProfilePic)}
+                    alt={post.userName || "User"}
+                    className="post-author-pic"
+                  />
+                ) : (
+                  <div className="post-author-pic-placeholder">
+                    {(post.userName || "U")[0].toUpperCase()}
+                  </div>
+                )}
                 <span className="post-author">
                   {post.userName || "Unknown User"}
                 </span>
-              </div>
+              </Link>
               <img
                 src={toAssetUrl(post.image)}
                 alt="Post"

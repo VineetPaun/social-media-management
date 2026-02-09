@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useState, useRef, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { signup, type AuthPayload, ApiClientError } from "../api";
+import { signup, ApiClientError } from "../api";
 
 export function SignUp() {
   const navigate = useNavigate();
@@ -9,16 +9,31 @@ export function SignUp() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPreview(null);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    const payload: AuthPayload = { name, email, password };
+    const profilePicFile = fileInputRef.current?.files?.[0];
 
     try {
-      await signup(payload);
+      await signup({ name, email, password, profilePicFile });
       alert("Account created! Please sign in.");
       navigate("/signin");
     } catch (err) {
@@ -38,6 +53,34 @@ export function SignUp() {
         <h2 className="auth-title">Create Account</h2>
 
         <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group profile-pic-group">
+            <label htmlFor="profilePic">Profile Picture</label>
+            <div className="profile-pic-upload">
+              {preview ? (
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="profile-pic-preview"
+                />
+              ) : (
+                <div className="profile-pic-placeholder">
+                  <span>📷</span>
+                </div>
+              )}
+              <input
+                id="profilePic"
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="profile-pic-input"
+              />
+              <label htmlFor="profilePic" className="profile-pic-label">
+                Choose Photo
+              </label>
+            </div>
+          </div>
+
           <div className="form-group">
             <label htmlFor="name">Name</label>
             <input

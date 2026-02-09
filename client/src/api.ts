@@ -32,12 +32,14 @@ type SignUpData = {
   userId: string;
   userName: string;
   email: string;
+  profilePic: string | null;
 };
 
 type SignInData = {
   userId: string;
   userName: string;
   token: string;
+  profilePic?: string | null;
 };
 
 type PostRecord = {
@@ -46,6 +48,20 @@ type PostRecord = {
   description: string | null;
   image: string;
   userName: string | null;
+  userProfilePic: string | null;
+};
+
+type UserProfile = {
+  id: string;
+  name: string;
+  email: string;
+  profilePic: string | null;
+  postCount: number;
+  posts: {
+    id: string;
+    description: string | null;
+    image: string;
+  }[];
 };
 
 class ApiClientError extends Error {
@@ -155,12 +171,30 @@ const authHeaders = (token: string): HeadersInit => ({
   Authorization: `Bearer ${token}`,
 });
 
-const signup = (payload: AuthPayload) =>
-  request<SignUpData>("/user/signup", {
+const signup = ({
+  name,
+  email,
+  password,
+  profilePicFile,
+}: {
+  name: string;
+  email: string;
+  password: string;
+  profilePicFile?: File;
+}) => {
+  const formData = new FormData();
+  formData.append("name", name);
+  formData.append("email", email);
+  formData.append("password", password);
+  if (profilePicFile) {
+    formData.append("profilePic", profilePicFile);
+  }
+
+  return request<SignUpData>("/user/signup", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: formData,
   });
+};
 
 const signin = (payload: AuthPayload) =>
   request<SignInData>("/user/signin", {
@@ -199,8 +233,17 @@ const createPost = ({
   });
 };
 
-const deletePost = ({ token, postId }: { token: string; postId: string }) =>
-  request<{ postId: string }>(`/post/${postId}`, {
+const deletePost = ({ token, postId }: { token: string; postId: string }) => {
+  console.log("API deletePost called with postId:", postId);
+  console.log("Token present:", !!token);
+  return request<{ postId: string }>(`/post/${postId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+};
+
+const deleteAccount = (token: string) =>
+  request(`/user/delete`, {
     method: "DELETE",
     headers: authHeaders(token),
   });
@@ -215,14 +258,29 @@ const toAssetUrl = (imagePath: string): string => {
     : `${API_BASE_URL}/${imagePath}`;
 };
 
-export type { ApiFieldError, AuthPayload, PostRecord, SignInData, SignUpData };
+const fetchProfile = ({ token, userId }: { token: string; userId: string }) =>
+  request<UserProfile>(`/user/profile/${userId}`, {
+    method: "GET",
+    headers: authHeaders(token),
+  });
+
+export type {
+  ApiFieldError,
+  AuthPayload,
+  PostRecord,
+  SignInData,
+  SignUpData,
+  UserProfile,
+};
 export {
   API_BASE_URL,
   ApiClientError,
   createPost,
   deletePost,
   fetchPosts,
+  fetchProfile,
   signin,
   signup,
   toAssetUrl,
+  deleteAccount,
 };

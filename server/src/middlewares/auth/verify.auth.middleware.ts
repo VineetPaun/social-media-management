@@ -15,7 +15,15 @@ declare global {
   }
 }
 
-const verifyAuthToken = (req: Request, _res: Response, next: NextFunction) => {
+import { db } from "../../configs/database.config";
+import { usersTable } from "../../models/user.model";
+import { eq } from "drizzle-orm";
+
+const verifyAuthToken = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -52,6 +60,22 @@ const verifyAuthToken = (req: Request, _res: Response, next: NextFunction) => {
       typeof tokenUserEmail !== "string"
     ) {
       throw ApiError.unauthorized("Invalid token payload");
+    }
+
+    if (!db) {
+      throw ApiError.internal("Database connection not established");
+    }
+
+    // Check if user exists and is not deleted
+    const [user] = await db
+      .select({ isDeleted: usersTable.isDeleted })
+      .from(usersTable)
+      .where(eq(usersTable.id, String(tokenUserId)));
+
+    if (!user || user.isDeleted) {
+      throw ApiError.unauthorized(
+        "User account has been deleted or does not exist",
+      );
     }
 
     req.authUser = {

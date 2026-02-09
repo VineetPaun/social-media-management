@@ -4,6 +4,7 @@ import { SignUp } from "./pages/SignUp";
 import { SignIn } from "./pages/SignIn";
 import { Home } from "./pages/Home";
 import { CreatePostPage } from "./pages/CreatePost";
+import { Profile } from "./pages/Profile";
 import type { SignInData } from "./api";
 import "./App.css";
 
@@ -48,6 +49,9 @@ function App() {
           <nav className="nav-links">
             {auth ? (
               <>
+                <Link to={`/profile/${auth.userId}`} className="nav-link">
+                  Profile
+                </Link>
                 <span className="user-name">Hi, {auth.userName}</span>
                 <button onClick={handleLogout} className="btn-logout">
                   Logout
@@ -70,13 +74,7 @@ function App() {
           <Routes>
             <Route
               path="/"
-              element={
-                <Home
-                  auth={auth}
-                  onPostDeleted={handlePostCreated}
-                  refreshTrigger={refreshTrigger}
-                />
-              }
+              element={<Home auth={auth} refreshTrigger={refreshTrigger} />}
             />
             <Route path="/signup" element={<SignUp />} />
             <Route
@@ -92,6 +90,10 @@ function App() {
                   onPostCreated={handlePostCreated}
                 />
               }
+            />
+            <Route
+              path="/profile/:userId"
+              element={<Profile auth={auth} onLogout={handleLogout} />}
             />
           </Routes>
         </main>

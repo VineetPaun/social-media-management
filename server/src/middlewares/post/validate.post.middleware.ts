@@ -11,12 +11,15 @@ type PostValidationMode = "create" | "edit" | "delete";
 const validatePostInput =
   (mode: PostValidationMode) =>
   (req: Request, res: Response, next: NextFunction) => {
-    const { description: descriptionRaw } = req.body as {
+    console.log(`validatePostInput called with mode: ${mode}`);
+    console.log("req.params:", req.params);
+    console.log("req.body:", req.body);
+
+    const body = (req.body || {}) as {
       description?: unknown;
-    };
-    const { image: imageRaw } = req.body as {
       image?: unknown;
     };
+    const { description: descriptionRaw, image: imageRaw } = body;
     const { postId } = req.params as {
       postId?: string;
     };
@@ -76,6 +79,10 @@ const validatePostInput =
         message: "Validation failed",
         errors,
       });
+    }
+
+    if (!req.body) {
+      req.body = {};
     }
 
     if (typeof descriptionRaw === "string") {
