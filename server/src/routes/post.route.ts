@@ -29,4 +29,10 @@ postRouter.delete(
     post("delete"),
 );
 
+postRouter.get(
+    "/",
+    verifyAuthToken,
+    post("get"),
+)
+
 export default postRouter;

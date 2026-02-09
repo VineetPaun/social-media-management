@@ -8,14 +8,14 @@ const userRouter = express.Router();
 
 userRouter.post(
   "/signup",
-  validateAuthInput,
+  validateAuthInput("signup"),
   checkUser("signup"),
   asyncHandler(signup),
 );
 
 userRouter.post(
   "/signin",
-  validateAuthInput,
+  validateAuthInput("signin"),
   checkUser("signin"),
   asyncHandler(signin),
 );

@@ -7,6 +7,7 @@ import { connectDB, db } from "./configs/database.config";
 import userRouter from "./routes/user.route";
 import { usersTable } from "./models/user.model";
 import postRouter from "./routes/post.route";
+import { postsTable } from "./models/post.model";
 
 const port = 3000;
 const app = express();
@@ -31,6 +32,7 @@ app.use('/post', postRouter)
 app.delete("/drop", async (req, res, next) => {
   try {
     await db?.delete(usersTable)
+    await db?.delete(postsTable)
     // logger.warn("Database dropped via API request");
     res.json({ success: true, message: "Database dropped successfully" });
   } catch (error) {
@@ -41,7 +43,7 @@ app.delete("/drop", async (req, res, next) => {
 app.listen(port, () => {
   console.log(`
     ╔════════════════════════════════════════════╗
-    ║    Social Media Management App             ║
+    ║    Instagram Management App             ║
     ╠════════════════════════════════════════════╣
     ║  Port:        ${port}                         ║
     ║  Environment: development                  ║

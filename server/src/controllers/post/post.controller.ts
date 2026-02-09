@@ -4,10 +4,11 @@ import { fileURLToPath } from "node:url";
 import { NextFunction, Request, Response } from "express";
 import { db } from "../../configs/database.config";
 import { postsTable } from "../../models/post.model";
+import { usersTable } from "../../models/user.model";
 import { ApiError } from "../../middlewares/error/api.error.middleware";
 import { and, eq } from "drizzle-orm";
 
-type PostMode = "create" | "edit" | "delete";
+type PostMode = "create" | "edit" | "delete" | "get";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const uploadsRootDir = path.resolve(currentDir, "../../../uploads");
@@ -39,10 +40,12 @@ const removeUploadedImage = async (publicImagePath?: string | null) => {
 };
 
 const post =
-  (mode: PostMode) => async (req: Request, res: Response, next: NextFunction) => {
+  (mode: PostMode) =>
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { description } = req.body as {
+      const { description, image: imageRaw } = (req.body || {}) as {
         description?: string;
+        image?: string;
       };
       const { postId } = req.params as {
         postId?: string;
@@ -58,9 +61,33 @@ const post =
         throw ApiError.internal("Database connection not established");
       }
 
+      const imagePathFromBody =
+        typeof imageRaw === "string" && imageRaw.trim().length > 0
+          ? imageRaw.trim()
+          : undefined;
+
       const imagePath = imageFile
         ? `/uploads/posts/${imageFile.filename}`
-        : undefined;
+        : imagePathFromBody;
+
+      if (mode === "get") {
+        const posts = await db
+          .select({
+            id: postsTable.id,
+            description: postsTable.description,
+            image: postsTable.image,
+            userId: postsTable.userId,
+            userName: usersTable.name,
+          })
+          .from(postsTable)
+          .leftJoin(usersTable, eq(postsTable.userId, usersTable.id));
+
+        return res.status(200).json({
+          success: true,
+          message: "Posts fetched successfully",
+          data: posts,
+        });
+      }
 
       if (mode === "create") {
         if (!imagePath) {
@@ -98,10 +125,7 @@ const post =
           .update(postsTable)
           .set(updateValues)
           .where(
-            and(
-              eq(postsTable.id, postId),
-              eq(postsTable.userId, authUser.id),
-            ),
+            and(eq(postsTable.id, postId), eq(postsTable.userId, authUser.id)),
           )
           .returning({
             id: postsTable.id,
@@ -120,10 +144,7 @@ const post =
         const [deletedPost] = await db
           .delete(postsTable)
           .where(
-            and(
-              eq(postsTable.id, postId),
-              eq(postsTable.userId, authUser.id),
-            ),
+            and(eq(postsTable.id, postId), eq(postsTable.userId, authUser.id)),
           )
           .returning({
             id: postsTable.id,

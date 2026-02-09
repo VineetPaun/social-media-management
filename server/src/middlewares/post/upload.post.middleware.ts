@@ -40,8 +40,11 @@ const postImageUpload = multer({
 const uploadPostImage = (req: Request, res: Response, next: NextFunction) => {
   postImageUpload.single("image")(req, res, (error) => {
     if (!error) {
+      console.log("Upload successful, file:", req.file?.filename);
       return next();
     }
+
+    console.log("Upload error:", error);
 
     if (error instanceof multer.MulterError) {
       if (error.code === "LIMIT_FILE_SIZE") {

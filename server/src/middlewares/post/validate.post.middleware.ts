@@ -14,12 +14,17 @@ const validatePostInput =
     const { description: descriptionRaw } = req.body as {
       description?: unknown;
     };
+    const { image: imageRaw } = req.body as {
+      image?: unknown;
+    };
     const { postId } = req.params as {
       postId?: string;
     };
     const errors: PostValidationError[] = [];
+    const hasImageString =
+      typeof imageRaw === "string" && imageRaw.trim().length > 0;
 
-    if (mode === "create" && !req.file) {
+    if (mode === "create" && !req.file && !hasImageString) {
       errors.push({ field: "image", message: "Image is required" });
     }
 
@@ -49,7 +54,7 @@ const validatePostInput =
       }
     }
 
-    if (mode === "edit" && !req.file) {
+    if (mode === "edit" && !req.file && !hasImageString) {
       const hasDescription =
         typeof descriptionRaw === "string" && descriptionRaw.trim().length > 0;
 
@@ -62,6 +67,9 @@ const validatePostInput =
     }
 
     if (errors.length > 0) {
+      console.log("Post validation failed:", errors);
+      console.log("req.file:", req.file);
+      console.log("imageRaw:", imageRaw);
       return res.status(400).json({
         success: false,
         statusCode: 400,
@@ -74,6 +82,12 @@ const validatePostInput =
       req.body.description = descriptionRaw.trim();
     } else {
       req.body.description = undefined;
+    }
+
+    if (typeof imageRaw === "string") {
+      req.body.image = imageRaw.trim();
+    } else {
+      req.body.image = undefined;
     }
 
     next();
