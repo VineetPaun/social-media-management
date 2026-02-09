@@ -3,14 +3,18 @@ import Transport from "winston-transport";
 import { db } from "./database.config";
 import { logsTable } from "../models/log.model";
 
+// Custom log levels for the application
+// Define log levels hierarchy (lower number = higher priority)
 const levels = {
-  error: 0,
-  warn: 1,
-  info: 2,
-  http: 3,
-  debug: 4,
+  error: 0,  // Critical errors
+  warn: 1,   // Warning messages
+  info: 2,   // General information
+  http: 3,   // HTTP request logs
+  debug: 4,  // Debug information
 };
 
+// Color mapping for console output
+// Color mapping for console output
 const colors = {
   error: "red",
   warn: "yellow",
@@ -19,33 +23,42 @@ const colors = {
   debug: "white",
 };
 
+// Apply colors to Winston
 winston.addColors(colors);
 
+/**
+ * Custom Winston transport to save logs to database
+ * Stores logs in the database for persistence and analysis
+ */
 class DbTransport extends Transport {
   constructor(opts?: any) {
     super(opts);
   }
 
+  // Override log method to save logs to database
   log(info: any, callback: () => void) {
+    // Emit logged event immediately
     setImmediate(() => {
       this.emit("logged", info);
     });
 
+    // Save to database if connection is available
     if (db) {
       const { level, message, timestamp, ...meta } = info;
 
-      // Strip ANSI color codes from level if present
+      // Remove ANSI color codes from level string
       const cleanLevel = level.replace(/\u001b\[.*?m/g, "");
 
-      // Allow metadata to be stored as JSON
+      // Prepare metadata object if it exists
       const metadata = Object.keys(meta).length > 0 ? meta : undefined;
 
+      // Insert log entry into database
       db.insert(logsTable)
         .values({
           level: cleanLevel,
           message: message,
           metadata: metadata,
-          timestamp: new Date(), // Use current time
+          timestamp: new Date(), // Use current timestamp
         })
         .catch((err) => {
           console.error("Failed to save log to DB:", err);
@@ -56,6 +69,8 @@ class DbTransport extends Transport {
   }
 }
 
+// Console output format with colors and timestamps
+// Console output format configuration
 const consoleFormat = winston.format.combine(
   winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss:ms" }),
   winston.format.colorize({ all: true }),
@@ -64,17 +79,23 @@ const consoleFormat = winston.format.combine(
   ),
 );
 
+// Configure transports for logging
+// Configure transport methods (console and database)
 const transports = [
+  // Console transport for development
   new winston.transports.Console({
     format: consoleFormat,
   }),
+  // Database transport for persistence
   new DbTransport(),
 ];
 
+// Create and configure the main logger instance
+// Create Winston logger instance with custom configuration
 const logger = winston.createLogger({
-  level: "debug",
-  levels,
-  transports,
+  level: "debug",  // Log all levels from debug and above
+  levels,          // Use custom levels
+  transports,      // Use configured transports
 });
 
 export default logger;

@@ -1,3 +1,5 @@
+// Profile picture upload middleware using Multer
+// Handles file upload, validation, and storage for user profile pictures
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -37,6 +39,10 @@ const profileImageUpload = multer({
   },
 });
 
+/**
+ * Express middleware for handling profile picture uploads
+ * Processes single image upload with size limits and validation
+ */
 const uploadProfileImage = (
   req: Request,
   res: Response,

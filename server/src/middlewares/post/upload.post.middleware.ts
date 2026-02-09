@@ -1,3 +1,5 @@
+// Post image upload middleware using Multer
+// Handles file upload, validation, and storage for post images
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -7,14 +9,17 @@ import multer from "multer";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const uploadDir = path.resolve(currentDir, "../../../uploads/posts");
+// Create uploads directory if it doesn't exist
 fs.mkdirSync(uploadDir, { recursive: true });
 
+// Allowed image MIME types for security
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
 ]);
 
+// Multer configuration for post image uploads
 const postImageUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, callback) => {
@@ -37,6 +42,10 @@ const postImageUpload = multer({
   },
 });
 
+/**
+ * Express middleware for handling post image uploads
+ * Processes single image upload with error handling and validation
+ */
 const uploadPostImage = (req: Request, res: Response, next: NextFunction) => {
   postImageUpload.single("image")(req, res, (error) => {
     if (!error) {

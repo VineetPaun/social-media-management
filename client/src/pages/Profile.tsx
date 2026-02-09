@@ -10,23 +10,33 @@ import {
   ApiClientError,
 } from "../api";
 
+// Props interface for Profile component
 interface ProfileProps {
-  auth: SignInData | null;
-  onLogout?: () => void;
+  auth: SignInData | null;  // Current user authentication data
+  onLogout?: () => void;    // Optional logout callback
 }
 
+/**
+ * Profile component - Displays user profile with posts and account management
+ * Shows user information, post grid, and deletion options for own profile
+ */
 export function Profile({ auth, onLogout }: ProfileProps) {
   const { userId } = useParams<{ userId: string }>();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Component state
+  const [profile, setProfile] = useState<UserProfile | null>(null);  // Profile data
+  const [loading, setLoading] = useState(true);                      // Loading state
+  const [error, setError] = useState<string | null>(null);           // Error message
 
-  const [postToDelete, setPostToDelete] = useState<string | null>(null);
-  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] =
+  // Modal state for confirmations
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);     // Post ID to delete
+  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] =            // Account deletion confirmation
     useState(false);
 
+  // Check if viewing own profile
   const isOwnProfile = auth?.userId === userId;
 
+  // Load profile data on component mount or when userId changes
+  // Load user profile data on component mount
   useEffect(() => {
     const loadProfile = async () => {
       if (!auth?.token || !userId) {
@@ -53,15 +63,20 @@ export function Profile({ auth, onLogout }: ProfileProps) {
     loadProfile();
   }, [auth, userId]);
 
+  // Show delete confirmation modal for a specific post
+  // Set post ID for deletion confirmation modal
   const handleDeleteClick = (postId: string) => {
     setPostToDelete(postId);
   };
 
+  // Confirm and execute post deletion
+  // Confirm and execute post deletion
   const confirmDelete = async () => {
     if (!postToDelete || !auth?.token) return;
 
     try {
       await deletePost({ token: auth.token, postId: postToDelete });
+      // Update profile state by removing deleted post
       if (profile) {
         setProfile({
           ...profile,
@@ -69,7 +84,7 @@ export function Profile({ auth, onLogout }: ProfileProps) {
           postCount: profile.postCount - 1,
         });
       }
-      setPostToDelete(null);
+      setPostToDelete(null); // Close modal
     } catch (err) {
       if (err instanceof ApiClientError) {
         alert(err.message);
@@ -79,23 +94,30 @@ export function Profile({ auth, onLogout }: ProfileProps) {
     }
   };
 
+  // Cancel post deletion
   const cancelDelete = () => {
     setPostToDelete(null);
   };
 
+  // Show account deletion confirmation modal
+  // Show account deletion confirmation modal
   const handleDeleteAccountClick = () => {
     setShowDeleteAccountConfirm(true);
   };
 
+  // Cancel account deletion
   const cancelDeleteAccount = () => {
     setShowDeleteAccountConfirm(false);
   };
 
+  // Confirm and execute account deletion
+  // Confirm and execute account deletion
   const confirmDeleteAccount = async () => {
     if (!auth?.token) return;
 
     try {
       await deleteAccount(auth.token);
+      // Trigger logout callback to clear auth state
       if (onLogout) {
         onLogout();
       }
@@ -110,6 +132,7 @@ export function Profile({ auth, onLogout }: ProfileProps) {
     }
   };
 
+  // Show signin prompt for unauthenticated users
   if (!auth) {
     return (
       <div className="profile-page">
@@ -123,6 +146,7 @@ export function Profile({ auth, onLogout }: ProfileProps) {
     );
   }
 
+  // Show loading state
   if (loading) {
     return (
       <div className="profile-page">
@@ -131,6 +155,7 @@ export function Profile({ auth, onLogout }: ProfileProps) {
     );
   }
 
+  // Show error state
   if (error) {
     return (
       <div className="profile-page">
@@ -139,6 +164,7 @@ export function Profile({ auth, onLogout }: ProfileProps) {
     );
   }
 
+  // Show not found state
   if (!profile) {
     return (
       <div className="profile-page">

@@ -1,9 +1,16 @@
+// Input validation middleware using ValidatorJS
+// Validates and sanitizes authentication request data
 import { NextFunction, Request, Response } from "express";
 import Validator from "validatorjs";
 import { ApiError } from "../error/api.error.middleware";
 
 type AuthValidationMode = "signup" | "signin";
 
+/**
+ * Validate authentication input based on operation mode
+ * Applies different validation rules for signup vs signin
+ * Sanitizes input data and returns formatted error messages
+ */
 const validateAuthInput =
   (mode: AuthValidationMode) =>
   (req: Request, res: Response, next: NextFunction) => {

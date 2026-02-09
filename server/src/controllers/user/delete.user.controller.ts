@@ -5,6 +5,10 @@ import { postsTable } from "../../models/post.model";
 import { ApiError } from "../../middlewares/error/api.error.middleware";
 import { eq } from "drizzle-orm";
 
+/**
+ * Soft delete user account and all associated posts
+ * Marks user and posts as deleted without removing from database
+ */
 const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authUser = req.authUser;

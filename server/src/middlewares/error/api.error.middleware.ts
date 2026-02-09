@@ -1,15 +1,25 @@
+/**
+ * Custom API Error class for consistent error handling
+ * Provides static methods for common HTTP error types
+ */
+/**
+ * Custom API Error class for structured error handling
+ * Provides static methods for common HTTP error responses
+ */
 class ApiError extends Error {
-  statusCode: number;
-  errors: unknown[] | null;
-  isOperational: boolean;
+  statusCode: number;        // HTTP status code
+  errors: unknown[] | null;  // Additional error details (e.g., validation errors)
+  isOperational: boolean;    // Flag to distinguish operational vs programming errors
 
   constructor(statusCode: number, message: string, errors: unknown[] | null = null) {
     super(message);
     this.statusCode = statusCode;
     this.errors = errors;
-    this.isOperational = true;
+    this.isOperational = true; // Mark as operational error (expected/handled)
   }
 
+  // Static factory methods for common error types
+  
   static badRequest(message: string, errors = null) {
     return new ApiError(400, message || "Bad Request", errors);
   }

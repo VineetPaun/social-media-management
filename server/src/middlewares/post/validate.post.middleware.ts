@@ -1,8 +1,15 @@
+// Post input validation middleware
+// Validates post creation, editing, and deletion requests
 import { NextFunction, Request, Response } from "express";
 import Validator from "validatorjs";
 
 type PostValidationMode = "create" | "edit" | "delete";
 
+/**
+ * Validate post input based on operation mode
+ * Applies different validation rules for create, edit, and delete operations
+ * Ensures data integrity and proper field requirements
+ */
 const validatePostInput =
   (mode: PostValidationMode) =>
   (req: Request, res: Response, next: NextFunction) => {

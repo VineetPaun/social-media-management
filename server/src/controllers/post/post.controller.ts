@@ -5,8 +5,10 @@ import { NextFunction, Request, Response } from "express";
 import { db } from "../../configs/database.config";
 import { postsTable } from "../../models/post.model";
 import { usersTable } from "../../models/user.model";
+import { likesTable } from "../../models/like.model";
+import { commentsTable } from "../../models/comment.model";
 import { ApiError } from "../../middlewares/error/api.error.middleware";
-import { and, eq } from "drizzle-orm";
+import { and, eq, count, desc, ilike, sql } from "drizzle-orm";
 
 type PostMode = "create" | "edit" | "delete" | "get";
 
@@ -71,6 +73,17 @@ const post =
         : imagePathFromBody;
 
       if (mode === "get") {
+        const page = parseInt((req.query.page as string) || "1", 10);
+        const limit = parseInt((req.query.limit as string) || "10", 10);
+        const search = (req.query.search as string) || "";
+        const offset = (page - 1) * limit;
+
+        const whereConditions = and(
+          eq(postsTable.isDeleted, false),
+          eq(usersTable.isDeleted, false),
+          search ? ilike(postsTable.description, `%${search}%`) : undefined,
+        );
+
         const posts = await db
           .select({
             id: postsTable.id,
@@ -79,20 +92,38 @@ const post =
             userId: postsTable.userId,
             userName: usersTable.name,
             userProfilePic: usersTable.profilePic,
+            createdAt: postsTable.createdAt,
+            likeCount: sql<number>`(SELECT COUNT(*)::int FROM likes WHERE likes.post_id = ${postsTable.id})`.as("like_count"),
+            commentCount: sql<number>`(SELECT COUNT(*)::int FROM comments WHERE comments.post_id = ${postsTable.id} AND comments.is_deleted = false)`.as("comment_count"),
+            likedByMe: sql<boolean>`EXISTS(SELECT 1 FROM likes WHERE likes.post_id = ${postsTable.id} AND likes.user_id = ${authUser.id})`.as("liked_by_me"),
           })
           .from(postsTable)
           .leftJoin(usersTable, eq(postsTable.userId, usersTable.id))
-          .where(
-            and(
-              eq(postsTable.isDeleted, false),
-              eq(usersTable.isDeleted, false),
-            ),
-          ); // Filter out soft deleted posts and posts from soft deleted users
+          .where(whereConditions)
+          .limit(limit)
+          .offset(offset)
+          .orderBy(desc(postsTable.createdAt)); // Newest first
+
+        // Get total count for pagination metadata
+        const [totalCountResult] = await db
+          .select({ count: count() })
+          .from(postsTable)
+          .leftJoin(usersTable, eq(postsTable.userId, usersTable.id))
+          .where(whereConditions);
+
+        const totalPosts = totalCountResult ? totalCountResult.count : 0;
+        const totalPages = Math.ceil(totalPosts / limit);
 
         return res.status(200).json({
           success: true,
           message: "Posts fetched successfully",
           data: posts,
+          pagination: {
+            page,
+            limit,
+            totalPosts,
+            totalPages,
+          },
         });
       }
 
@@ -217,3 +248,55 @@ const post =
   };
 
 export { post };
+
+const getOnePost = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authUser = req.authUser;
+    const { postId } = req.params as { postId?: string };
+
+    if (!authUser) {
+      throw ApiError.unauthorized("Unauthorized");
+    }
+
+    if (!db) {
+      throw ApiError.internal("Database connection not established");
+    }
+
+    if (!postId) {
+      throw ApiError.badRequest("Post ID is required");
+    }
+
+    const [postData] = await db
+      .select({
+        id: postsTable.id,
+        description: postsTable.description,
+        image: postsTable.image,
+        userId: postsTable.userId,
+        userName: usersTable.name,
+        userProfilePic: usersTable.profilePic,
+        createdAt: postsTable.createdAt,
+        likeCount: sql<number>`(SELECT COUNT(*)::int FROM likes WHERE likes.post_id = ${postsTable.id})`.as("like_count"),
+        commentCount: sql<number>`(SELECT COUNT(*)::int FROM comments WHERE comments.post_id = ${postsTable.id} AND comments.is_deleted = false)`.as("comment_count"),
+        likedByMe: sql<boolean>`EXISTS(SELECT 1 FROM likes WHERE likes.post_id = ${postsTable.id} AND likes.user_id = ${authUser.id})`.as("liked_by_me"),
+      })
+      .from(postsTable)
+      .leftJoin(usersTable, eq(postsTable.userId, usersTable.id))
+      .where(
+        and(eq(postsTable.id, postId), eq(postsTable.isDeleted, false)),
+      );
+
+    if (!postData) {
+      throw ApiError.notFound("Post not found");
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Post fetched successfully",
+      data: postData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { getOnePost };

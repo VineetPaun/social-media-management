@@ -5,6 +5,10 @@ import { postsTable } from "../../models/post.model";
 import { ApiError } from "../../middlewares/error/api.error.middleware";
 import { and, eq } from "drizzle-orm";
 
+/**
+ * Get user profile information with posts count and post list
+ * Returns user data and associated posts for profile display
+ */
 const getProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId } = req.params as { userId: string };
@@ -28,6 +32,7 @@ const getProfile = async (req: Request, res: Response, next: NextFunction) => {
       throw ApiError.notFound("User not found");
     }
 
+    // Fetch user's posts (only non-deleted posts)
     const posts = await db
       .select({
         id: postsTable.id,
@@ -39,7 +44,7 @@ const getProfile = async (req: Request, res: Response, next: NextFunction) => {
         and(eq(postsTable.userId, userId), eq(postsTable.isDeleted, false)),
       );
 
-    // Remove isDeleted from user object before sending response
+    // Remove isDeleted field from response for security
     const { isDeleted, ...userResponse } = user;
 
     res.status(200).json({
