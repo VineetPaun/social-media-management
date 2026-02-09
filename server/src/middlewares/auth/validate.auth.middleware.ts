@@ -1,98 +1,58 @@
 import { NextFunction, Request, Response } from "express";
-import validator from "validator";
-
-type AuthValidationError = {
-  field: "name" | "password" | "email";
-  message: string;
-};
+import Validator from "validatorjs";
+import { ApiError } from "../error/api.error.middleware";
 
 type AuthValidationMode = "signup" | "signin";
 
 const validateAuthInput =
   (mode: AuthValidationMode) =>
   (req: Request, res: Response, next: NextFunction) => {
-    const {
-      name: usernameRaw,
-      password: passwordRaw,
-      email: emailRaw,
-    } = req.body as {
-      name?: string;
-      password?: string;
-      email?: string;
-    };
-    const errors: AuthValidationError[] = [];
+    const { name, email, password } = req.body;
 
-    // Name is only required for signup
+    // Define rules based on mode
+    let rules: Validator.Rules = {};
+
     if (mode === "signup") {
-      if (
-        usernameRaw === undefined ||
-        usernameRaw === null ||
-        usernameRaw === ""
-      ) {
-        errors.push({ field: "name", message: "Username is required" });
-      } else if (typeof usernameRaw !== "string") {
-        errors.push({ field: "name", message: "Username must be a string" });
-      } else {
-        const trimmedUsername = usernameRaw.trim();
-
-        if (!validator.isLength(trimmedUsername, { min: 3, max: 50 })) {
-          errors.push({
-            field: "name",
-            message: "Username must be between 3 and 50 characters",
-          });
-        }
-      }
-    }
-
-    if (
-      passwordRaw === undefined ||
-      passwordRaw === null ||
-      passwordRaw === ""
-    ) {
-      errors.push({ field: "password", message: "Password is required" });
-    } else if (typeof passwordRaw !== "string") {
-      errors.push({ field: "password", message: "Password must be a string" });
+      rules = {
+        name: "required|string|between:3,50",
+        email: "required|string|email|max:254",
+        password: "required|string|between:6,15",
+      };
     } else {
-      if (!validator.isLength(passwordRaw, { min: 6, max: 15 })) {
-        errors.push({
-          field: "password",
-          message: "Password must be at between 6 and 15 characters",
-        });
-      }
+      // Signin
+      rules = {
+        email: "required|string|email",
+        password: "required|string",
+      };
     }
 
-    if (emailRaw === undefined || emailRaw === null || emailRaw === "") {
-      errors.push({ field: "email", message: "Email is required" });
-    } else if (typeof emailRaw !== "string") {
-      errors.push({ field: "email", message: "Email must be a string" });
-    } else {
-      const trimmedEmail = emailRaw.trim().toLowerCase();
-
-      if (!validator.isLength(trimmedEmail, { min: 3, max: 254 })) {
-        errors.push({
-          field: "email",
-          message: "Email must be between 3 and 254 characters",
-        });
-      } else if (!validator.isEmail(trimmedEmail)) {
-        errors.push({ field: "email", message: "Email format is invalid" });
-      }
+    // Sanitize inputs (trim) before validation
+    if (req.body.name && typeof req.body.name === "string") {
+      req.body.name = req.body.name.trim();
+    }
+    if (req.body.email && typeof req.body.email === "string") {
+      req.body.email = req.body.email.trim().toLowerCase();
     }
 
-    if (errors.length > 0) {
+    const validation = new Validator(req.body, rules);
+
+    if (validation.fails()) {
+      const errors = validation.errors.all();
+
+      // Transform errors to match the expected format
+      const formattedErrors = Object.keys(errors).map((key) => ({
+        field: key,
+        message: errors[key][0], // Take the first error message for each field
+      }));
+
       return res.status(400).json({
         success: false,
         statusCode: 400,
         message: "Validation failed",
-        errors,
+        errors: formattedErrors,
       });
     }
 
-    if (typeof usernameRaw === "string") {
-      req.body.name = usernameRaw.trim();
-    }
-    if (typeof emailRaw === "string") {
-      req.body.email = emailRaw.trim().toLowerCase();
-    }
     next();
   };
 

@@ -7,7 +7,7 @@ import { and, eq } from "drizzle-orm";
 
 const getProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.params as { userId: string };
 
     if (!db) {
       throw ApiError.internal("Database connection not established");
